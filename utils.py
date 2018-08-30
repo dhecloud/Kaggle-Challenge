@@ -1,5 +1,5 @@
 import pydicom as pdc
-import matplotlib.pyplot as plt
+import cv2
 import pandas as pd
 import numpy as np
 import os
@@ -37,11 +37,14 @@ def parse_data(df):
             parsed[pid] = {
                 'dicom': os.path.join(data_dir, 'stage_1_train_images/%s.dcm' % pid),
                 'label': row['Target'],
-                'boxes': []}
+                'boxes': [],
+                'present': False}
 
         # --- Add box if opacity is present
         if parsed[pid]['label'] == 1:
             parsed[pid]['boxes'].append(extract_box(row))
+            parsed[pid]['present'] = True
+
 
     return parsed
 
@@ -62,9 +65,15 @@ def draw(data):
         rgb = np.floor(np.random.rand(3) * 256).astype('int')
         im = overlay_box(im=im, box=box, rgb=rgb, stroke=6)
 
-    plt.imshow(im, cmap=plt.cm.bone)
-    plt.axis('off')
-    plt.show()
+    cv2.imshow("image", im)
+    ch = cv2.waitKey(0)
+    if ch == ord('q'):
+        exit(0)
+    im = inc_contrast(im, 100 , 0)
+    cv2.imshow("image2", im)
+    ch = cv2.waitKey(0)
+    if ch == ord('q'):
+        exit(0)
 
 def overlay_box(im, box, rgb, stroke=1):
     """
@@ -85,20 +94,22 @@ def overlay_box(im, box, rgb, stroke=1):
     im[y1:y2, x2:x2 + stroke] = rgb
 
     return im
+
+def inc_contrast(img, c, b):
+    img = cv2.addWeighted(img, 1. + c/127., img, 0, b-c)
+    return img
+
 if __name__ == "__main__":
     df = pd.read_csv(os.path.join(data_dir,'stage_1_train_labels.csv'))
     parsed = parse_data(df)
 
     for i in range(46, len(parsed.keys())):
         print(df.iloc[i])
-        patientId = df['patientId'][46]
+        patientId = df['patientId'][i]
         dcm_file = data_dir + '/stage_1_train_images/%s.dcm' % patientId
         dcm_data = pdc.read_file(dcm_file)
         print(parsed[patientId])
         assert(dcm_data.pixel_array.shape == (1024,1024))
-        print(len(parsed[patientId]['boxes']))
-        # assert(len(parsed[patientId]['boxes']) == 2 or len(parsed[patientId]['boxes']) == 0)
-        draw(parsed[patientId])
-        # plt.imshow(dcm_data.pixel_array, cmap=plt.cm.bone)
-        # plt.axis('off')
-        # plt.show()
+        print(len(parsed))
+        # print((parsed[patientId]['present']))
+        # draw(parsed[patientId])
