@@ -15,17 +15,23 @@ class RadioGraphsDataset(Dataset):
     def __init__(self, training, args):
         self.training = training
         self.classification = True
+        self.augment = False
         self.data_dir = 'D:/all/'
         self.df = pd.read_csv(os.path.join(self.data_dir,'stage_1_train_labels.csv'))
         self.truth = parse_data(self.df)
 
         if self.training:
-            self.data_index, _, _,_ = train_test_split(np.arange(len(self.truth)), np.arange(len(self.truth)), test_size=0.33, random_state=42)
-            self.length = len(self.data_index)
+            self.data_index, _, _,_ = train_test_split(np.arange(len(self.truth)), np.arange(len(self.truth)), test_size=0.25, random_state=42)
+
 
         else:
-            _, self.data_index, _,_ = train_test_split(np.arange(len(self.truth)), np.arange(len(self.truth)), test_size=0.33, random_state=42)
+            _, self.data_index, _,_ = train_test_split(np.arange(len(self.truth)), np.arange(len(self.truth)), test_size=0.25, random_state=42)
             self.length = len(self.data_index)
+
+        self.length = len(self.data_index)
+        with open('val.txt','w') as f:
+            for i in range(self.length):
+                f.write(self.df['patientId'][self.data_index[i]] +'\n')
 
 
 
@@ -47,6 +53,6 @@ class RadioGraphsDataset(Dataset):
             return torch.tensor(data), torch.tensor(bbox)
 
 if __name__ == "__main__":
-    dataset = RadioGraphsDataset(training = True, args="hi")
+    dataset = RadioGraphsDataset(training = False, args="hi")
     data, truth =  dataset.__getitem__(4)
     print(data.shape)

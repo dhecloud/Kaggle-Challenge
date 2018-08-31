@@ -114,8 +114,6 @@ def main(args):
 
     train_loss = []
     val_loss = []
-    val_acc = []
-    mean_errors = []
     best = False
 
     print_options(args)
@@ -130,10 +128,8 @@ def main(args):
         train_loss = train_loss + loss_train
         if args.validate:
             # evaluate on validation set
-            loss_val, mean_error = validate(val_loader, model, criterion ,args)
+            loss_val= validate(val_loader, model, criterion ,args)
             val_loss = val_loss + loss_val
-            mean_errors += mean_error
-            #print(mean_errors)
         state = {
             'epoch': epoch,
             'arch': "REN",
@@ -158,11 +154,6 @@ def main(args):
     # save_plt(train_loss, "train_loss")
     np.savetxt(os.path.join(expr_dir, "val_loss.out"),val_loss, fmt='%f')
     # save_plt(val_loss, "val_loss")
-    np.savetxt(os.path.join(expr_dir, "val_acc.out"),val_acc, fmt='%f')
-    # save_plt(val_acc, "val_acc")
-    np.savetxt(os.path.join(expr_dir, "mean_errors.out"),mean_errors, fmt='%f')
-    # save_plt(mean_errors, "mean_errors")
-
 
 
 
@@ -177,12 +168,12 @@ def train(train_loader, model, criterion, optimizer, epoch,args):
 
         stime = time.time()
         # measure data loading time
-        target = target.float()
+        target = target.long()
         target = target.cuda(non_blocking=False)
         input = input.float()
         input = input.cuda()
         # compute output
-        output = model(input)
+        output = model(input).float()
 
         loss = criterion(output, target)
         # measure accuracy and record loss
@@ -210,18 +201,16 @@ def validate(val_loader, model, criterion, args):
     model.eval()
 
     loss_val = []
-    errors = []
     with torch.no_grad():
         expr_dir = os.path.join(args.save_dir, args.name)
         for i, (input, target) in enumerate(val_loader):
-            target = target.float()
+            target = target.long()
             target = target.cuda(non_blocking=False)
             # compute output
             input = input.float()
             input = input.cuda()
-            output = model(input)
+            output = model(input).float()
 
-            errors.append(compute_distance_error(output, target).item())
             loss = criterion(output, target)
 
             if i % args.print_interval == 0:
@@ -232,7 +221,7 @@ def validate(val_loader, model, criterion, args):
             np.savetxt(os.path.join(expr_dir, "_iteration_val_loss.out"), np.asarray(loss_val), fmt='%f')
 
 
-    return [np.mean(loss_val)] , [np.mean(errors)]
+    return [np.mean(loss_val)]
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
