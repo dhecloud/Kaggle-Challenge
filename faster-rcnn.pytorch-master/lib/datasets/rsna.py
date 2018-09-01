@@ -22,7 +22,7 @@ import uuid
 import pandas as pd
 from .voc_eval import voc_eval
 from model.utils.config import cfg
-from rsna_utils import parse_data
+from .rsna_utils import parse_data
 import pdb
 
 
@@ -37,7 +37,7 @@ class rsna(imdb):
     self._data_path = os.path.join(self._devkit_path)
     self._classes = ('__background__',  # always index 0
                      'lung_opacity')
-    self.truth = parse_data(os.path.join(data_dir,'stage_1_train_labels.csv'))
+    self.truth = parse_data(pd.read_csv(os.path.join(self._data_path,'stage_1_train_labels.csv')))
     self._class_to_ind = dict(list(zip(self.classes, list(range(self.num_classes)))))
     self._image_ext = '.dcm'
     self._image_index = self._load_image_set_index()
@@ -63,6 +63,12 @@ class rsna(imdb):
     Return the absolute path to image i in the image sequence.
     """
     return self.image_path_from_index(self._image_index[i])
+
+  def image_id_at(self, i):
+    """
+    Return the absolute path to image i in the image sequence.
+    """
+    return i
 
   def image_path_from_index(self, index):
     """
@@ -93,7 +99,7 @@ class rsna(imdb):
     """
     Return the default path where TrainImages is expected to be installed.
     """
-    return os.path.join(cfg.DATA_DIR, 'Images')
+    return os.path.join(cfg.DATA_DIR)
 
   def gt_roidb(self):
     """
@@ -111,7 +117,7 @@ class rsna(imdb):
       print('{} gt roidb loaded from {}'.format(self.name, cache_file))
       return roidb
 
-    gt_roidb = [self._load_pascal_annotation(index)
+    gt_roidb = [self._load_rsna_annotation(index)
                 for index in self.image_index]
     with open(cache_file, 'wb') as fid:
       pickle.dump(gt_roidb, fid, pickle.HIGHEST_PROTOCOL)
@@ -146,7 +152,7 @@ class rsna(imdb):
 
     dcm_data = self.truth[index]
     num_objs = len(dcm_data['boxes'])
-    boxes = np.asarray((num_objs, 4), dtype=np.uint16)
+    boxes = np.zeros((num_objs, 4), dtype=np.uint16)
     gt_classes = np.zeros((num_objs), dtype=np.int32)
     overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
     # "Seg" area for pascal is just the box area
@@ -159,11 +165,11 @@ class rsna(imdb):
       y1 = dcm_data['boxes'][i][0]  #ymin
       x2 = x1 + dcm_data['boxes'][i][3] #xmax
       y2 = y1 + dcm_data['boxes'][i][2] #ymax
-      cls = "lung_opacity"
-      boxes[ix, :] = [x1, y1, x2, y2]
-      gt_classes[ix] = cls
-      overlaps[ix, cls] = 1.0
-      seg_areas[ix] = (x2 - x1 + 1) * (y2 - y1 + 1)
+      cls = 1
+      boxes[i, :] = [x1, y1, x2, y2]
+      gt_classes[i] = cls
+      overlaps[i, cls] = 1.0
+      seg_areas[i] = (x2 - x1 + 1) * (y2 - y1 + 1)
 
     overlaps = scipy.sparse.csr_matrix(overlaps)
 

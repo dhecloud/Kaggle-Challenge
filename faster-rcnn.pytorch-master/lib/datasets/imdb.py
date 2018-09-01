@@ -16,6 +16,7 @@ import numpy as np
 import scipy.sparse
 from model.utils.config import cfg
 import pdb
+import pydicom
 
 ROOT_DIR = osp.join(osp.dirname(__file__), '..', '..')
 
@@ -108,8 +109,10 @@ class imdb(object):
     raise NotImplementedError
 
   def _get_widths(self):
-    return [PIL.Image.open(self.image_path_at(i)).size[0]
+    return [1024
             for i in range(self.num_images)]
+    # return [PIL.Image.open(self.image_path_at(i)).size[0]
+    #         for i in range(self.num_images)]
 
   def append_flipped_images(self):
     num_images = self.num_images

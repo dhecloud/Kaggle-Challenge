@@ -1,0 +1,13 @@
+#!/bin/bash
+#PBS -q gpu
+#PBS -l select=1:ncpus=4:mem=8G:ngpus=1:ompthreads=8
+#PBS -l walltime=24:00:00
+#PBS -N train
+#PBS -P Personal
+module load cuda/9.2
+export LD_LIBRARY_PATH=$HOME/opt/lib
+source activate pytorch1
+echo $PBS_O_WORKDIR
+cd $PBS_O_WORKDIR
+echo start main
+python main.py --save_dir ../scratch/experiments/ 

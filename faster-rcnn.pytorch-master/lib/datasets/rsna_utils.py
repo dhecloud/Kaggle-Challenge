@@ -48,6 +48,10 @@ def parse_data(df):
 
     return parsed
 
+def DCM2RGB(im):
+    im = np.stack([im] * 3, axis=2)
+    return im
+
 def draw(data):
     """
     Method to draw single patient with bounding box(es) if present
@@ -58,22 +62,32 @@ def draw(data):
     im = d.pixel_array
 
     # --- Convert from single-channel grayscale to 3-channel RGB
-    im = np.stack([im] * 3, axis=2)
+    im = DCM2RGB(im)
 
     # --- Add boxes with random color if present
     for box in data['boxes']:
         rgb = np.floor(np.random.rand(3) * 256).astype('int')
         im = overlay_box(im=im, box=box, rgb=rgb, stroke=6)
 
+    print(im.shape)
     cv2.imshow("image", im)
     ch = cv2.waitKey(0)
     if ch == ord('q'):
         exit(0)
-    im = inc_contrast(im, 100 , 0)
-    cv2.imshow("image2", im)
+
+    im2 = d.pixel_array
+    im2 = DCM2RGB(im2)
+    im2 = cv2.resize(im2, (256, 256))
+    for box in data['boxes']:
+        rgb = np.floor(np.random.rand(3) * 256).astype('int')
+        im2 = overlay_box(im=im2, box=box, rgb=rgb, stroke=6)
+
+    print(im2.shape)
+    cv2.imshow("image", im2)
     ch = cv2.waitKey(0)
     if ch == ord('q'):
         exit(0)
+
 
 def overlay_box(im, box, rgb, stroke=1):
     """
@@ -81,7 +95,10 @@ def overlay_box(im, box, rgb, stroke=1):
 
     """
     # --- Convert coordinates to integers
-    box = [int(b) for b in box]
+    if im.shape[0] == 256:
+        box = [int(b*0.25) for b in box]
+    else:
+        box = [int(b) for b in box]
 
     # --- Extract coordinates
     y1, x1, height, width = box
@@ -100,16 +117,30 @@ def inc_contrast(img, c, b):
     return img
 
 if __name__ == "__main__":
-    df = pd.read_csv(os.path.join(data_dir,'stage_1_train_labels.csv'))
-    parsed = parse_data(df)
+    # df = pd.read_csv(os.path.join(data_dir,'stage_1_train_labels.csv'))
+    # parsed = parse_data(df)
+    #
+    # # len(parsed.keys())
+    # for i in range(5256, len(parsed.keys())):
+    #     print(df.iloc[i])
+    #     patientId = df['patientId'][i]
+    #     dcm_file = data_dir + '/stage_1_train_images/%s.dcm' % patientId
+    #     dcm_data = pdc.read_file(dcm_file)
+    #     assert(dcm_data.pixel_array.shape == (1024,1024))
+    #     # draw(parsed[patientId])
+    #     rgb = DCM2RGB(dcm_data.pixel_array)
+    #     rgb = cv2.resize(rgb, (128, 128))
+    #     jpg_file = data_dir + '/stage_1_train_images_resized_128/%s.jpg' % patientId
+    #     cv2.imwrite(jpg_file, rgb)
 
-    for i in range(46, len(parsed.keys())):
-        print(df.iloc[i])
-        patientId = df['patientId'][i]
-        dcm_file = data_dir + '/stage_1_train_images/%s.dcm' % patientId
-        dcm_data = pdc.read_file(dcm_file)
-        print(parsed[patientId])
-        assert(dcm_data.pixel_array.shape == (1024,1024))
-        print(len(parsed))
-        # print((parsed[patientId]['present']))
-        draw(parsed[patientId])
+    for (dirpath, dirnames, filenames) in os.walk(data_dir + '/stage_1_test_images/'):
+        for file in filenames:
+            if '.dcm' in file:
+                dcm_data = pdc.read_file(data_dir + '/stage_1_test_images/' + file)
+                print(dcm_data)
+                assert(dcm_data.pixel_array.shape == (1024,1024))
+                # draw(parsed[patientId])
+                rgb = DCM2RGB(dcm_data.pixel_array)
+                rgb = cv2.resize(rgb, (128, 128))
+                jpg_file = data_dir + '/stage_1_test_images_resized_128/' + file.replace('.dcm','.jpg')
+                cv2.imwrite(jpg_file, rgb)
